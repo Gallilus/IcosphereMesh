@@ -1,19 +1,18 @@
 # Based on
 # https://schneide.blog/2016/07/15/generating-an-icosphere-in-c/
 
-tool
 extends ArrayMesh
 class_name IcosphereMesh
 
 export var subdivisions : int = 2 setget set_subdivisions
-func set_subdivisions(value):
+func set_subdivisions (value):
 	value = clamp(value, 0,6)
 	if not value == subdivisions:
 		subdivisions = value
 		update_mesh()
 
 export var diameter := 1.0 setget set_diameter
-func set_diameter(value):
+func set_diameter (value):
 	if not diameter ==  value:
 		diameter = value
 		update_mesh()
@@ -37,12 +36,19 @@ var core_triangles : PoolVector3Array = [
 		Vector3(6,1,10), Vector3(9,0,11), Vector3(9,11,2), Vector3(9,2,5), Vector3(7,2,11),
 		]
 
+var uvs : PoolVector2Array = []
+var core_uvs : PoolVector2Array = []
+
 func _init():
+	for v in core_vertices:
+		core_uvs.push_back (uv (v))
 	update_mesh()
 
 func update_mesh():
+	
 	triangles = core_triangles
 	vertices = core_vertices
+	uvs = core_uvs
 	
 	for i in subdivisions:
 		triangles = subdivide()
@@ -58,8 +64,10 @@ func update_mesh():
 ## Initialize the ArrayMesh.
 	var arrays = []
 	arrays.resize(ArrayMesh.ARRAY_MAX)
-	arrays[ArrayMesh.ARRAY_VERTEX] = vertices
-	arrays[ArrayMesh.ARRAY_INDEX] = triangles_pi
+	arrays [ArrayMesh.ARRAY_VERTEX] = vertices
+	arrays [ArrayMesh.ARRAY_INDEX] = triangles_pi
+	arrays [ArrayMesh.ARRAY_TEX_UV] = uvs
+	
 ## Create the Mesh.
 	clear_surfaces()
 	self.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
@@ -78,7 +86,8 @@ func vertex_for_edge(first:int, second:int) -> int:
 		var edge0 = vertices[first]
 		var edge1 = vertices[second]
 		var point : Vector3 = (edge0 + edge1).normalized()
-		vertices.push_back(point)
+		vertices.push_back (point)
+		uvs.push_back (uv (point))
 	
 	return lookup[key]
 
@@ -97,4 +106,7 @@ func subdivide():
 		new_triangles.push_back(Vector3(mid[0], mid[1], mid[2]))
 	return new_triangles
 
-
+func uv (cartesian : Vector3) -> Vector2:
+	var u = 0.5 + (atan2 (cartesian.x, cartesian.z) / (2 * PI))
+	var v = 0.5 - (asin (cartesian.y) / PI)
+	return Vector2 (u, v)
